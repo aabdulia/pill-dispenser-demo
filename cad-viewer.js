@@ -4,7 +4,6 @@ import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const host = document.getElementById('cad-viewer');
-const status = document.getElementById('cad-status');
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -44,8 +43,7 @@ new STLLoader().load('cad/dispenser-model.stl', (geometry) => {
   controls.target.copy(target);
   camera.position.set(dist * .55, size.y * .75, -dist * .8);
   controls.minDistance = size.y * .8; controls.maxDistance = size.y * 4;
-  status.textContent = `${size.x.toFixed(0)} × ${size.z.toFixed(0)} × ${size.y.toFixed(0)} mm · drag to rotate, scroll to zoom`;
   resize();
-}, undefined, () => { status.textContent = 'Could not load the CAD model.'; });
+}, undefined, (err) => console.error('Could not load the CAD model', err));
 
 (function tick() { requestAnimationFrame(tick); controls.update(); renderer.render(scene, camera); })();

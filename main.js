@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const els = Object.fromEntries(['clock','mode-badge','device-status','device-message','dose-chip','care-dose','evidence','next','events','care-note','enter','dispense','observe','confirm','guided','reset','camera','camera-status','camera-label','video','vision-canvas','r-face','r-hands','r-dist','r-hold','hint'].map(id => [id, $(id)]));
+const els = Object.fromEntries(['clock','mode-badge','device-status','device-message','dose-chip','enter','dispense','observe','confirm','guided','reset','camera','camera-status','camera-label','video','vision-canvas','r-face','r-hands','r-dist','r-hold','hint'].map(id => [id, $(id)]));
 const canvas = els['vision-canvas'], ctx = canvas.getContext('2d');
 const ORANGE = '#d97757', ORANGE_DEEP = '#9e4a2c', ORANGE_SOFT = '#fbeee8';
 const MOUTH_RADIUS = 0.42;      // fingertip-to-mouth distance, as a fraction of face width
@@ -15,79 +15,61 @@ const stamp = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute:
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
-function log(title, detail, cv = false) {
-  const li = document.createElement('li'); if (cv) li.className = 'cv';
-  const time = document.createElement('time'); time.textContent = stamp();
-  const body = document.createElement('div'); const strong = document.createElement('strong'); strong.textContent = title;
-  const small = document.createElement('small'); small.textContent = detail;
-  body.append(strong, small); li.append(time, body); els.events.prepend(li);
-}
 function speak(message) { if (!('speechSynthesis' in window)) return; speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(message); u.rate = .92; u.lang = 'en-US'; speechSynthesis.speak(u); }
 function flash(btn) { btn.classList.add('flash'); setTimeout(() => btn.classList.remove('flash'), 450); }
 
 // ---------- State machine ----------
 function render() {
   if (state.phase !== lastPhase) { lastPhase = state.phase; state.since = performance.now(); }
-  els.clock.textContent = stamp(); els['care-dose'].textContent = `${state.dose} of 2`; els['dose-chip'].textContent = `DOSE ${state.dose} OF 2`;
+  els.clock.textContent = stamp(); els['dose-chip'].textContent = `DOSE ${state.dose} OF 2`;
   els.enter.disabled = state.phase !== 'waiting'; els.dispense.disabled = state.phase !== 'prompted'; els.observe.disabled = state.phase !== 'dispensed'; els.confirm.disabled = !['dispensed','gesture'].includes(state.phase);
   const labels = { waiting: 'Waiting for presence', prompted: 'Reminder active', dispensed: 'Cup ready', gesture: 'Possible intake', completed: 'Dose recorded', finished: 'Demo complete' };
-  els['device-status'].textContent = labels[state.phase]; els.evidence.textContent = state.evidence;
-  els.next.textContent = state.dose === 1 ? (state.phase === 'completed' ? 'In 8 demo seconds' : 'After dose 1') : (state.phase === 'finished' ? 'None scheduled' : 'Dose 2 active');
+  els['device-status'].textContent = labels[state.phase];
 }
 function reset() {
   timers.forEach(clearTimeout); timers = []; if ('speechSynthesis' in window) speechSynthesis.cancel();
-  state = { dose: 1, phase: 'waiting', evidence: 'Not started', since: performance.now() }; lastPhase = null;
+  state = { dose: 1, phase: 'waiting', since: performance.now() }; lastPhase = null;
   presenceFrames = gestureFrames = thumbFrames = 0; Object.assign(sim, { x: 1.35, tx: 1.35, hand: 0, ht: 0, thumb: false });
-  els.events.replaceChildren(); els['device-message'].innerHTML = 'Dose 1 is due.<br>Waiting for someone to enter.';
-  els['care-note'].textContent = 'The person has not yet been observed at the device. A camera signal never proves a pill was swallowed.';
-  log('Dose 1 scheduled', 'Demo clock: waiting for room presence.'); render();
+  els['device-message'].innerHTML = 'Dose 1 is due.<br>Waiting for someone to enter.'; render();
 }
-function enter(source = 'Manual') {
-  if (state.phase !== 'waiting') return; state.phase = 'prompted'; state.evidence = 'Reminder spoken';
+function enter() {
+  if (state.phase !== 'waiting') return; state.phase = 'prompted';
   els['device-message'].textContent = `It’s time for dose ${state.dose}. Please press the button.`;
-  els['care-note'].textContent = 'A person was detected in the room. Their identity has not been verified.';
-  log(source === 'Manual' ? 'Presence → reminder' : 'Face detected → reminder', `${source}. Voice prompt for dose ${state.dose}.`, source !== 'Manual');
   speak(`It's time for dose ${state.dose}. Please come to the dispenser and press the button.`); render();
 }
 function dispense() {
-  if (state.phase !== 'prompted') return; state.phase = 'dispensed'; state.evidence = 'Dispensed; unconfirmed';
+  if (state.phase !== 'prompted') return; state.phase = 'dispensed';
   els['device-message'].textContent = 'Medication in cup. Please take it.';
-  els['care-note'].textContent = 'The button was pressed and the demo cup is marked dispensed. The camera is watching for an intake-like gesture.';
-  log('Dispense button pressed', 'One demo dispense event; repeat press locked.'); speak('Please take the medication from the cup.'); render();
-  const current = state.dose;
-  delay(() => { if (state.dose === current && state.phase === 'dispensed') { state.evidence = 'Uncertain'; els['care-note'].textContent = 'No intake-like gesture was observed. A caregiver should check without assuming a missed dose.'; log('Intake uncertain', 'No visible gesture before the demo timeout.', true); render(); } }, 15000);
+  speak('Please take the medication from the cup.'); render();
 }
-function observe(source = 'Manual simulation') {
-  if (state.phase !== 'dispensed') return; state.phase = 'gesture'; state.evidence = 'Possible intake';
+function observe() {
+  if (state.phase !== 'dispensed') return; state.phase = 'gesture';
   els['device-message'].textContent = 'Possible intake observed. Please confirm.';
-  els['care-note'].textContent = 'Hand-to-mouth movement is only a clue. It cannot establish that the medication was swallowed.';
-  log('Possible intake gesture', `${source}: fingertips held inside the mouth zone after dispense.`, source !== 'Manual simulation');
   speak('Did you take your medication? Please confirm.'); render();
 }
-function confirm(how = 'Person pressed Confirm taken') {
-  if (!['dispensed','gesture'].includes(state.phase)) return; state.phase = state.dose === 2 ? 'finished' : 'completed'; state.evidence = 'Person confirmed';
+function confirm() {
+  if (!['dispensed','gesture'].includes(state.phase)) return; state.phase = state.dose === 2 ? 'finished' : 'completed';
   els['device-message'].textContent = state.dose === 2 ? 'Two doses complete. Thank you.' : 'Thank you. Next reminder is scheduled.';
-  els['care-note'].textContent = 'The person confirmed taking the dose. The log records self-report, with the observed gesture as separate context.';
-  log(`Dose ${state.dose} confirmed`, `${how}; this is a self-report.`, how.includes('thumbs')); speak('Thank you. Your dose is recorded.'); render();
-  if (state.dose === 1) delay(() => { if (state.phase !== 'completed') return; state.dose = 2; state.phase = 'waiting'; state.evidence = 'Not started'; presenceFrames = 0; els['device-message'].textContent = 'Dose 2 is due. Waiting for someone to enter.'; log('Dose 2 scheduled', 'Compressed 8-second demo interval, independent of the camera.'); render(); }, 8000);
+  speak('Thank you. Your dose is recorded.'); render();
+  if (state.dose === 1) delay(() => { if (state.phase !== 'completed') return; state.dose = 2; state.phase = 'waiting'; presenceFrames = 0; els['device-message'].textContent = 'Dose 2 is due. Waiting for someone to enter.'; render(); }, 8000);
 }
 
 // ---------- Shared vision analysis ----------
 // obs: { face: {x0,y0,x1,y1,mouth,width} | null, hands: [{tips:[{x,y}], points?, thumbsUp?}] } in mirrored, normalized coords.
-function analyze(obs, source) {
+function analyze(obs) {
   const face = obs.face, hands = obs.hands;
   presenceFrames = face ? presenceFrames + 1 : 0;
-  if (state.phase === 'waiting' && presenceFrames >= PRESENCE_FRAMES) enter(source);
+  if (state.phase === 'waiting' && presenceFrames >= PRESENCE_FRAMES) enter();
 
   let ratio = Infinity, nearest = null;
   if (face) for (const h of hands) for (const t of h.tips) { const r = dist(t, face.mouth) / face.width; if (r < ratio) { ratio = r; nearest = t; } }
   const near = ratio < MOUTH_RADIUS;
   gestureFrames = state.phase === 'dispensed' && near ? gestureFrames + 1 : 0;
-  if (gestureFrames >= GESTURE_FRAMES) { gestureFrames = 0; observe(source); }
+  if (gestureFrames >= GESTURE_FRAMES) { gestureFrames = 0; observe(); }
 
   const thumb = ['dispensed','gesture'].includes(state.phase) && !near && hands.some(h => h.thumbsUp);
   thumbFrames = thumb ? thumbFrames + 1 : 0;
-  if (thumbFrames >= THUMB_FRAMES) { thumbFrames = 0; confirm('Camera saw a held thumbs-up'); }
+  if (thumbFrames >= THUMB_FRAMES) { thumbFrames = 0; confirm(); }
 
   els['r-face'].textContent = face ? 'Present' : 'None';
   els['r-hands'].textContent = hands.length + (hands.some(h => h.thumbsUp) ? ' · 👍' : '');
@@ -150,7 +132,7 @@ function simActor() {
     case 'waiting': sim.tx = t > 900 ? .5 : sim.tx; sim.ht = 0; break;
     case 'prompted': sim.tx = .5; if (t > 2300 && !state.simPressed) { state.simPressed = true; flash(els.dispense); dispense(); } break;
     case 'dispensed': state.simPressed = false; sim.ht = t > 1300 ? 1 : 0; break;
-    case 'gesture': if (t > 700) sim.ht = 0; if (t > 2200 && !state.simPressed) { state.simPressed = true; sim.thumb = true; delay(() => { sim.thumb = false; flash(els.confirm); confirm('Simulated person pressed Confirm taken'); }, 900); } break;
+    case 'gesture': if (t > 700) sim.ht = 0; if (t > 2200 && !state.simPressed) { state.simPressed = true; sim.thumb = true; delay(() => { sim.thumb = false; flash(els.confirm); confirm(); }, 900); } break;
     case 'completed': case 'finished': state.simPressed = false; sim.ht = 0; if (t > 1400) sim.tx = -.4; break;
   }
   sim.x += clamp(sim.tx - sim.x, -.011, .011); sim.hand += (sim.ht - sim.hand) * .07;
@@ -178,7 +160,7 @@ function simFrame() {
   const face = inFrame ? { x0: (cx - r * 1.1) / W, y0: (cy - r * 1.15 + bob) / H, x1: (cx + r * 1.1) / W, y1: (cy + r * 1.1 + bob) / H, mouth: n(mouth.x, mouth.y), width: (r * 2) / W } : null;
   const hands = hy < H * .98 && inFrame ? [{ tips: [n(hx - r * .2, hy - r * .25), n(hx, hy - r * .32), n(hx + r * .2, hy - r * .25)] }] : [];
   const obs = { face, hands };
-  drawOverlay(obs, analyze(obs, 'Simulated camera'));
+  drawOverlay(obs, analyze(obs));
 }
 
 // ---------- Live camera ----------
@@ -205,7 +187,7 @@ function liveFrame() {
   if (!faceLandmarker) { ctx.fillStyle = '#ffffffb3'; ctx.fillRect(0, 0, W, H); tag('Loading vision models…', 12 * W / 640, 36 * W / 640); return; }
   if (v.currentTime !== lastVideoTime) {
     lastVideoTime = v.currentTime; const t = performance.now();
-    try { lastObs = toObs(faceLandmarker.detectForVideo(v, t).faceLandmarks, handLandmarker.detectForVideo(v, t).landmarks); lastObs.a = analyze(lastObs, 'Camera'); } catch { return; }
+    try { lastObs = toObs(faceLandmarker.detectForVideo(v, t).faceLandmarks, handLandmarker.detectForVideo(v, t).landmarks); lastObs.a = analyze(lastObs); } catch { return; }
     els['camera-label'].textContent = lastObs.face ? `LIVE · face · ${lastObs.hands.length} hand(s)` : 'LIVE · no face in frame';
   }
   if (lastObs) drawOverlay(lastObs, lastObs.a);
@@ -242,9 +224,9 @@ async function startCamera() {
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 }, audio: false });
     els.video.srcObject = stream; await els.video.play();
     canvas.width = els.video.videoWidth || 640; canvas.height = els.video.videoHeight || 480;
-    const { FaceLandmarker, HandLandmarker, FilesetResolver } = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm');
+    const { FaceLandmarker, HandLandmarker, FilesetResolver } = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/+esm');
     handConnections = HandLandmarker.HAND_CONNECTIONS;
-    const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm');
+    const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm');
     let pair; try { pair = await createLandmarkers(vision, FaceLandmarker, HandLandmarker, 'GPU'); } catch { pair = await createLandmarkers(vision, FaceLandmarker, HandLandmarker, 'CPU'); }
     if (!stream) { pair.forEach(p => p.close()); return; }
     [faceLandmarker, handLandmarker] = pair;
@@ -261,7 +243,7 @@ function stopCamera(message = true) {
 }
 function startSim() { if (stream) stopCamera(false); reset(); setMode('sim'); els['camera-status'].textContent = 'Simulated person and synthetic landmarks. No camera in use.'; }
 
-els.enter.onclick = () => enter(); els.dispense.onclick = dispense; els.observe.onclick = () => observe(); els.confirm.onclick = () => confirm();
+els.enter.onclick = enter; els.dispense.onclick = dispense; els.observe.onclick = observe; els.confirm.onclick = confirm;
 els.guided.onclick = startSim; els.reset.onclick = reset;
 els.camera.onclick = () => stream || loading ? stopCamera() : startCamera();
 document.addEventListener('keydown', (e) => { if (e.code === 'Space' && !['BUTTON','INPUT','TEXTAREA'].includes(e.target.tagName)) { e.preventDefault(); if (!els.dispense.disabled) { flash(els.dispense); dispense(); } } });

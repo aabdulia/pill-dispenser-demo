@@ -41,9 +41,9 @@ main { max-width: 1368px; margin: auto; padding: 34px 24px }
 
 .layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(340px, 1fr); gap: 18px }
 .panel { background: #fff; border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 8px 26px #8a4a2a0d }
-.device-panel, .caregiver-panel { padding: 24px }
+.device-panel { padding: 24px }
 .panel-head { display: flex; justify-content: space-between; align-items: start; gap: 10px; margin-bottom: 22px }
-.panel-head h2, .hardware-panel h2 { font-size: 1.5rem; letter-spacing: -.03em; margin: 0 }
+.panel-head h2 { font-size: 1.5rem; letter-spacing: -.03em; margin: 0 }
 .status { background: var(--orange-soft); color: var(--orange-deep); border-radius: 20px; font-size: .82rem; font-weight: 700; padding: 8px 12px; white-space: nowrap }
 
 .device-stage { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; align-items: stretch; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px }
@@ -65,36 +65,18 @@ main { max-width: 1368px; margin: auto; padding: 34px 24px }
 .display #dose-chip { font-size: .75rem; opacity: .85; letter-spacing: .13em }
 
 .device-controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 16px 0 }
-.device-controls button, .hardware-actions button { background: #fff; color: var(--orange-deep); border: 1px solid var(--orange-line); border-radius: 11px; padding: 12px 10px; font-weight: 700; font-size: .86rem }
-.device-controls button:not(:disabled):hover, .hardware-actions button:hover { background: var(--orange-soft) }
+.device-controls button, .demo-row button { background: #fff; color: var(--orange-deep); border: 1px solid var(--orange-line); border-radius: 11px; padding: 12px 10px; font-weight: 700; font-size: .86rem }
+.device-controls button:not(:disabled):hover, .demo-row button:hover { background: var(--orange-soft) }
 .device-controls button.flash { background: var(--orange); color: #fff; border-color: var(--orange); opacity: 1 }
 .caption { font-size: .82rem; line-height: 1.5; color: var(--muted); margin: 0 }
 
-.summary { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 12px; gap: 8px }
-.summary div { padding: 0 8px; border-right: 1px solid var(--line) }
-.summary div:last-child { border: 0 }
-.summary span { display: block; color: var(--muted); font-size: .76rem; margin-bottom: 8px }
-.summary strong { font-size: .99rem; letter-spacing: -.02em }
-.timeline-head { display: flex; justify-content: space-between; align-items: center; margin: 25px 0 5px }
-.timeline-head h3 { font-size: 1.05rem; margin: 0 }
-.timeline-head span { font-size: .75rem; color: var(--muted) }
-.events { list-style: none; padding: 0; margin: 0; max-height: 330px; overflow: auto }
-.events li { display: flex; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line); font-size: .89rem }
-.events li.cv strong::before { content: "◉ "; color: var(--orange) }
-.events time { color: var(--muted); min-width: 60px; font-size: .79rem }
-.events strong { display: block; margin-bottom: 3px }
-.events small { display: block; color: var(--muted); font-size: .78rem; line-height: 1.4 }
-.care-note { background: var(--orange-soft); border-left: 3px solid var(--orange); padding: 15px; margin-top: 22px; border-radius: 0 10px 10px 0; font-size: .87rem }
-.care-note p { margin: 5px 0 0; line-height: 1.5; color: #6b4a3c }
 
-.hardware-panel { margin-top: 18px; padding: 23px; display: grid; grid-template-columns: minmax(0, 1.1fr) 1fr; gap: 26px; align-items: center }
-.cad-viewer { position: relative; height: 420px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; cursor: grab }
+.cad-viewer { position: relative; flex: 1; background: var(--surface); border-radius: 20px; overflow: hidden; cursor: grab }
 .cad-viewer:active { cursor: grabbing }
 .cad-viewer canvas { display: block; width: 100%; height: 100% }
-#cad-status { position: absolute; bottom: 10px; left: 12px; font-size: .74rem; color: var(--muted); background: #ffffffd9; padding: 4px 8px; border-radius: 6px; pointer-events: none }
-.hardware-panel p:not(.eyebrow) { color: var(--muted); line-height: 1.5; margin: 8px 0 14px; max-width: 720px }
-.hardware-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: .85rem }
-.hardware-actions a { color: var(--orange-strong); font-weight: 700; text-decoration: none }
+.cad-panel { padding: 0; display: flex; overflow: hidden }
+.cad-panel .cad-viewer { flex: 1; min-height: 420px }
+.demo-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 14px }
 #camera-status { font-size: .82rem; color: var(--muted) }
 footer { display: flex; gap: 22px; padding: 28px 4px; color: var(--muted); font-size: .8rem; flex-wrap: wrap }
 footer span { margin-right: auto }
@@ -108,13 +90,9 @@ footer a { text-decoration: none; color: var(--orange-strong) }
   main { padding: 22px 16px }
   .intro { align-items: stretch; flex-direction: column }
   .intro-actions .primary { flex: 1 }
-  .device-panel, .caregiver-panel { padding: 17px }
+  .device-panel { padding: 17px }
   .device-stage { grid-template-columns: 1fr; padding: 10px }
   .display { min-height: 160px }
-  .summary { gap: 0 }
-  .summary span { font-size: .69rem }
-  .summary strong { font-size: .85rem }
-  .hardware-panel { grid-template-columns: 1fr }
-  .cad-viewer { height: 320px }
+  .cad-panel .cad-viewer { min-height: 320px }
   .readouts { grid-template-columns: 1fr }
 }

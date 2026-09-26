@@ -29,18 +29,12 @@
         </div>
         <div class="device-controls"><button id="enter">Person enters room</button><button id="dispense" disabled>Press dispense <kbd>Space</kbd></button><button id="observe" disabled>Simulate intake gesture</button><button id="confirm" disabled>Confirm taken 👍</button></div>
         <p class="caption" id="hint">Start the camera demo and step into frame. The camera sees you and the reminder starts. Press dispense, bring your hand to your mouth, then show a thumbs-up or press confirm.</p>
+        <div class="demo-row"><button id="reset" class="secondary">Reset demo</button><span id="camera-status" role="status">No camera access requested.</span></div>
       </section>
-      <section class="panel caregiver-panel" aria-labelledby="care-title">
-        <div class="panel-head"><div><p class="eyebrow">REMOTE VIEW</p><h2 id="care-title">Caregiver</h2></div><span class="status">Linked in this demo</span></div>
-        <div class="summary"><div><span>Current dose</span><strong id="care-dose">1 of 2</strong></div><div><span>Evidence</span><strong id="evidence">Not started</strong></div><div><span>Next reminder</span><strong id="next">After dose 1</strong></div></div>
-        <div class="timeline-head"><h3>Activity</h3><span>Latest first</span></div><ol id="events" class="events" aria-live="polite"></ol>
-        <div class="care-note"><strong>Caregiver interpretation</strong><p id="care-note">The person has not yet been observed at the device. A camera signal never proves a pill was swallowed.</p></div>
+      <section class="panel cad-panel" aria-label="Dispenser CAD model">
+        <div id="cad-viewer" class="cad-viewer" role="img" aria-label="Interactive 3D CAD model of the dispenser"></div>
       </section>
     </div>
-    <section class="panel hardware-panel">
-      <div id="cad-viewer" class="cad-viewer" role="img" aria-label="Interactive 3D CAD model of the dispenser"><span id="cad-status">Loading CAD model…</span></div>
-      <div><p class="eyebrow">HARDWARE CAD</p><h2>Countertop dispenser</h2><p>A front camera, a screen, one large dispense button, and a removable cup. Vision runs on the device with MediaPipe face and hand landmarks. It detects presence and intake-like gestures. It does not recognize who someone is, and it cannot verify swallowing.</p><div class="hardware-actions"><a href="cad/dispenser-model.step" download>Download STEP ↗</a><a href="cad/dispenser-model.stl" download>Download STL ↗</a><button id="reset" class="secondary">Reset demo</button><span id="camera-status" role="status">No camera access requested.</span></div></div>
-    </section>
     <footer><span>Concept only · No actual medicine or patient data · Camera frames never leave your browser</span><a href="cad/AI_CAD_PROMPT.md">AI CAD prompt ↗</a></footer>
   </main>
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
