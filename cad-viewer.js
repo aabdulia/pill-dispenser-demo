@@ -25,7 +25,7 @@ function resize() {
 }
 new ResizeObserver(resize).observe(host);
 
-new STLLoader().load('cad/dispenser-model.stl?v=7', (geometry) => {
+new STLLoader().load('cad/dispenser-model.stl?v=9', (geometry) => {
   geometry.rotateX(-Math.PI / 2);          // CAD is Z-up; three.js is Y-up
   geometry.computeVertexNormals();
   geometry.computeBoundingBox();
