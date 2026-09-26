@@ -69,10 +69,15 @@ main { max-width: 1368px; margin: auto; padding: 34px 24px }
 .caption { font-size: .82rem; line-height: 1.5; color: var(--muted); margin: 0 }
 
 
-.cad-viewer { position: absolute; inset: 0; background: var(--surface); border-radius: 20px; overflow: hidden; cursor: grab }
+.cad-viewer { position: relative; flex: 1; min-height: 0; background: var(--surface); border-radius: 20px 20px 0 0; overflow: hidden; cursor: grab }
 .cad-viewer:active { cursor: grabbing }
 .cad-viewer canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100% }
-.cad-panel { position: relative; min-height: 420px; overflow: hidden }
+.cad-panel { display: flex; flex-direction: column; min-height: 480px; overflow: hidden }
+.cad-downloads { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px; border-top: 1px solid var(--line) }
+.cad-downloads .dl { text-align: center; text-decoration: none; padding: 12px 10px; border-radius: 11px; font-weight: 700; font-size: .88rem; background: #fff; color: var(--orange-deep); border: 1px solid var(--orange-line) }
+.cad-downloads .dl:hover { background: var(--orange-soft) }
+.cad-downloads .dl.primary { background: var(--orange-strong); color: #fff; border-color: var(--orange-strong); box-shadow: none; padding: 12px 10px }
+.cad-downloads .dl.primary:hover { background: var(--orange-deep) }
 .demo-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 14px }
 #camera-status { font-size: .82rem; color: var(--muted) }
 
@@ -86,7 +91,7 @@ main { max-width: 1368px; margin: auto; padding: 34px 24px }
   .device-panel { padding: 17px }
   .device-stage { grid-template-columns: 1fr; padding: 10px }
   .display { min-height: 160px }
-  .cad-panel { min-height: 340px }
+  .cad-panel { min-height: 400px }
   .readouts { grid-template-columns: 1fr }
   .device-controls { grid-template-columns: 1fr }
 }
