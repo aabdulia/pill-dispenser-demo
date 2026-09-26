@@ -4,15 +4,18 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#ffffff">
   <title>Pill Dispenser Demo</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
   <header class="topbar"><div class="brand"><small>CONCEPT DEMO</small></div><div class="topright"><span id="clock">00:00</span><span id="mode-badge" class="badge">Idle</span></div></header>
   <main>
     <div class="intro">
-      <div class="intro-actions"><button id="camera" class="primary">Start camera demo</button><button id="guided" class="primary ghost">Run simulated demo</button></div>
+      <div class="intro-actions"><button id="camera" class="primary">Start camera demo</button></div>
     </div>
     <div class="layout">
+      <section class="panel cad-panel" aria-label="Dispenser CAD model">
+        <div id="cad-viewer" class="cad-viewer" role="img" aria-label="Interactive 3D CAD model of the dispenser"></div>
+      </section>
       <section class="panel device-panel" aria-labelledby="device-title">
         <div class="panel-head"><div><p class="eyebrow">AT HOME</p><h2 id="device-title">Dispenser</h2></div><span id="device-status" class="status">Waiting for presence</span></div>
         <div class="device-stage">
@@ -27,18 +30,14 @@
           </div>
           <div class="display"><div class="display-label">DEVICE SCREEN</div><div id="device-message" aria-live="polite">Dose 1 is due.<br>Waiting for someone to enter.</div><div id="dose-chip">DOSE 1 OF 2</div></div>
         </div>
-        <div class="device-controls"><button id="enter">Person enters room</button><button id="dispense" disabled>Press dispense <kbd>Space</kbd></button><button id="observe" disabled>Simulate intake gesture</button><button id="confirm" disabled>Confirm taken 👍</button></div>
-        <p class="caption" id="hint">Start the camera demo and step into frame. The camera sees you and the reminder starts. Press dispense, bring your hand to your mouth, then show a thumbs-up or press confirm.</p>
+        <div class="device-controls"><button id="enter">Person enters room</button><button id="dispense" disabled>Press dispense <kbd>Space</kbd></button><button id="observe" disabled>Simulate intake gesture</button></div>
+        <p class="caption" id="hint">Start the camera demo and step into frame. The camera sees you and the reminder starts. Press dispense, and bring your hand to your mouth. The dose is recorded and the next one is scheduled.</p>
         <div class="demo-row"><button id="reset" class="secondary">Reset demo</button><span id="camera-status" role="status">No camera access requested.</span></div>
       </section>
-      <section class="panel cad-panel" aria-label="Dispenser CAD model">
-        <div id="cad-viewer" class="cad-viewer" role="img" aria-label="Interactive 3D CAD model of the dispenser"></div>
-      </section>
     </div>
-    <footer><span>Concept only · No actual medicine or patient data · Camera frames never leave your browser</span><a href="cad/AI_CAD_PROMPT.md">AI CAD prompt ↗</a></footer>
   </main>
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
-  <script type="module" src="main.js"></script>
-  <script type="module" src="cad-viewer.js"></script>
+  <script type="module" src="main.js?v=6"></script>
+  <script type="module" src="cad-viewer.js?v=6"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # Smart pill dispenser concept demo
 
-A browser-based demo of a dispenser view and caregiver view sharing one state machine. The dispenser's camera drives the flow: face detection starts the reminder, and a hand-to-mouth gesture after dispensing flags possible intake. Run it with your own webcam, or with a **simulated person** whose synthetic landmarks go through the same vision pipeline. It cannot identify a person, see a swallowed pill, or prove that medication was taken.
+A browser-based demo of a dispenser view and caregiver view sharing one state machine. The dispenser's camera drives the flow: face detection starts the reminder, and a hand-to-mouth gesture after dispensing flags possible intake. It runs on your own webcam. It cannot identify a person, see a swallowed pill, or prove that medication was taken.
 
 ## Run locally
 
@@ -12,8 +12,7 @@ python3 -m http.server 8000
 
 Open `http://localhost:8000`.
 
-- **Start camera demo**: step into frame to trigger the reminder, press dispense (on-screen button or <kbd>Space</kbd>), bring your fingertips to your mouth and hold them there, then hold a thumbs-up or press **Confirm taken**. The camera view shows the face box, mouth zone, hand landmarks and fingertip-to-mouth distance.
-- **Run simulated demo**: an animated person goes through both doses. No camera is needed.
+- **Start camera demo**: step into frame to trigger the reminder, press dispense (on-screen button or <kbd>Space</kbd>), bring your fingertips to your mouth and hold them there. The dose is recorded and the next one is scheduled. The camera view shows the face box, mouth zone, hand landmarks and fingertip-to-mouth distance.
 - The manual buttons still work as a fallback.
 
 Camera mode runs MediaPipe detection on the device. It it loads model files from Google's hosting and JavaScript from jsDelivr. No frames are uploaded by this app. Browser speech uses `speechSynthesis` and may need a user click before audio works.
@@ -35,9 +34,9 @@ The website shows the Zoo export in an interactive 3D viewer (three.js, loaded f
 
 ## State and evidence
 
-The demo sequence is `scheduled → person present → voice reminder → button pressed → dispensed → observed / uncertain / missed → next dose scheduled`. The next reminder starts from a **configured schedule**, never from visual inference or an automatically inferred dose interval. Dispensing is locked after one press for that dose. The caregiver panel mirrors events in the same browser tab. In a real two-device product it needs an authenticated backend and event sync.
+The demo sequence is `scheduled → person present → voice reminder → button pressed → dispensed → hand-to-mouth observed → next dose scheduled`. The next reminder starts from a **configured schedule**, never from visual inference or an automatically inferred dose interval. Dispensing is locked after one press for that dose.
 
-Webcam mode uses MediaPipe Face Landmarker and Hand Landmarker. It looks for at least one face for presence, then a hand tip near the mouth after dispense. Such motion is **only a signal for “possible intake”**; the UI requires a separate explicit confirmation in this concept. Face detection is not facial recognition. If identity is important, add consented enrollment, an authorized face matching component, and a PIN or caregiver fallback after testing failure cases. Do not use this prototype to dispense actual medication or direct care.
+Webcam mode uses MediaPipe Face Landmarker and Hand Landmarker. It looks for at least one face for presence, then a hand tip near the mouth after dispense. In this demo that gesture records the dose and schedules the next one. It is **only a signal for possible intake**, and a real product would need a stronger check. Face detection is not facial recognition. If identity is important, add consented enrollment, an authorized face matching component, and a PIN or caregiver fallback after testing failure cases. Do not use this prototype to dispense actual medication or direct care.
 
 ## Next prototype gates
 

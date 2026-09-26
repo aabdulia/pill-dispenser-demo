@@ -36,10 +36,8 @@ main { max-width: 1368px; margin: auto; padding: 34px 24px }
 .eyebrow { font-size: .76rem; color: var(--orange-strong); font-weight: 800; letter-spacing: .15em; margin: 0 0 7px }
 .primary { background: var(--orange-strong); color: #fff; padding: 14px 22px; border-radius: 12px; white-space: nowrap; font-weight: 700; box-shadow: 0 8px 20px #c15f3c2e }
 .primary:hover { background: var(--orange-deep) }
-.primary.ghost { background: #fff; color: var(--orange-strong); border: 1.5px solid var(--orange); box-shadow: none }
-.primary.ghost:hover { background: var(--orange-soft) }
 
-.layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(340px, 1fr); gap: 18px }
+.layout { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(0, 1.35fr); gap: 18px }
 .panel { background: #fff; border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 8px 26px #8a4a2a0d }
 .device-panel { padding: 24px }
 .panel-head { display: flex; justify-content: space-between; align-items: start; gap: 10px; margin-bottom: 22px }
@@ -64,25 +62,20 @@ main { max-width: 1368px; margin: auto; padding: 34px 24px }
 .display #device-message { font-size: 1.38rem; font-weight: 700; line-height: 1.35; letter-spacing: -.02em }
 .display #dose-chip { font-size: .75rem; opacity: .85; letter-spacing: .13em }
 
-.device-controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 16px 0 }
+.device-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0 }
 .device-controls button, .demo-row button { background: #fff; color: var(--orange-deep); border: 1px solid var(--orange-line); border-radius: 11px; padding: 12px 10px; font-weight: 700; font-size: .86rem }
 .device-controls button:not(:disabled):hover, .demo-row button:hover { background: var(--orange-soft) }
 .device-controls button.flash { background: var(--orange); color: #fff; border-color: var(--orange); opacity: 1 }
 .caption { font-size: .82rem; line-height: 1.5; color: var(--muted); margin: 0 }
 
 
-.cad-viewer { position: relative; flex: 1; background: var(--surface); border-radius: 20px; overflow: hidden; cursor: grab }
+.cad-viewer { position: absolute; inset: 0; background: var(--surface); border-radius: 20px; overflow: hidden; cursor: grab }
 .cad-viewer:active { cursor: grabbing }
-.cad-viewer canvas { display: block; width: 100%; height: 100% }
-.cad-panel { padding: 0; display: flex; overflow: hidden }
-.cad-panel .cad-viewer { flex: 1; min-height: 420px }
+.cad-viewer canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100% }
+.cad-panel { position: relative; min-height: 420px; overflow: hidden }
 .demo-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 14px }
 #camera-status { font-size: .82rem; color: var(--muted) }
-footer { display: flex; gap: 22px; padding: 28px 4px; color: var(--muted); font-size: .8rem; flex-wrap: wrap }
-footer span { margin-right: auto }
-footer a { text-decoration: none; color: var(--orange-strong) }
 
-@media (max-width: 1100px) { .device-controls { grid-template-columns: repeat(2, 1fr) } }
 @media (max-width: 950px) { .layout { grid-template-columns: 1fr } }
 @media (max-width: 620px) {
   .topbar { height: 64px; padding: 0 16px }
@@ -93,6 +86,7 @@ footer a { text-decoration: none; color: var(--orange-strong) }
   .device-panel { padding: 17px }
   .device-stage { grid-template-columns: 1fr; padding: 10px }
   .display { min-height: 160px }
-  .cad-panel .cad-viewer { min-height: 320px }
+  .cad-panel { min-height: 340px }
   .readouts { grid-template-columns: 1fr }
+  .device-controls { grid-template-columns: 1fr }
 }

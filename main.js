@@ -1,14 +1,13 @@
 const $ = (id) => document.getElementById(id);
-const els = Object.fromEntries(['clock','mode-badge','device-status','device-message','dose-chip','enter','dispense','observe','confirm','guided','reset','camera','camera-status','camera-label','video','vision-canvas','r-face','r-hands','r-dist','r-hold','hint'].map(id => [id, $(id)]));
+const els = Object.fromEntries(['clock','mode-badge','device-status','device-message','dose-chip','enter','dispense','observe','reset','camera','camera-status','camera-label','video','vision-canvas','r-face','r-hands','r-dist','r-hold','hint'].map(id => [id, $(id)]));
 const canvas = els['vision-canvas'], ctx = canvas.getContext('2d');
 const ORANGE = '#d97757', ORANGE_DEEP = '#9e4a2c', ORANGE_SOFT = '#fbeee8';
 const MOUTH_RADIUS = 0.42;      // fingertip-to-mouth distance, as a fraction of face width
-const PRESENCE_FRAMES = 6, GESTURE_FRAMES = 8, THUMB_FRAMES = 15;
+const PRESENCE_FRAMES = 6, GESTURE_FRAMES = 8;
 
-let state, timers = [], lastPhase, mode = 'idle';
-let stream, faceLandmarker, handLandmarker, handConnections = [], lastVideoTime = -1, lastObs = null, loading = false;
-let presenceFrames = 0, gestureFrames = 0, thumbFrames = 0;
-const sim = { x: 1.35, tx: 1.35, hand: 0, ht: 0, thumb: false };
+let state, timers = [], mode = 'idle';
+let camError = null, stream, faceLandmarker, handLandmarker, handConnections = [], lastVideoTime = -1, lastObs = null, loading = false;
+let presenceFrames = 0, gestureFrames = 0;
 
 const delay = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
 const stamp = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -20,16 +19,15 @@ function flash(btn) { btn.classList.add('flash'); setTimeout(() => btn.classList
 
 // ---------- State machine ----------
 function render() {
-  if (state.phase !== lastPhase) { lastPhase = state.phase; state.since = performance.now(); }
   els.clock.textContent = stamp(); els['dose-chip'].textContent = `DOSE ${state.dose} OF 2`;
-  els.enter.disabled = state.phase !== 'waiting'; els.dispense.disabled = state.phase !== 'prompted'; els.observe.disabled = state.phase !== 'dispensed'; els.confirm.disabled = !['dispensed','gesture'].includes(state.phase);
-  const labels = { waiting: 'Waiting for presence', prompted: 'Reminder active', dispensed: 'Cup ready', gesture: 'Possible intake', completed: 'Dose recorded', finished: 'Demo complete' };
+  els.enter.disabled = state.phase !== 'waiting'; els.dispense.disabled = state.phase !== 'prompted'; els.observe.disabled = state.phase !== 'dispensed';
+  const labels = { waiting: 'Waiting for presence', prompted: 'Reminder active', dispensed: 'Cup ready', completed: 'Dose recorded', finished: 'Demo complete' };
   els['device-status'].textContent = labels[state.phase];
 }
 function reset() {
   timers.forEach(clearTimeout); timers = []; if ('speechSynthesis' in window) speechSynthesis.cancel();
-  state = { dose: 1, phase: 'waiting', since: performance.now() }; lastPhase = null;
-  presenceFrames = gestureFrames = thumbFrames = 0; Object.assign(sim, { x: 1.35, tx: 1.35, hand: 0, ht: 0, thumb: false });
+  state = { dose: 1, phase: 'waiting' };
+  presenceFrames = gestureFrames = 0;
   els['device-message'].innerHTML = 'Dose 1 is due.<br>Waiting for someone to enter.'; render();
 }
 function enter() {
@@ -43,19 +41,14 @@ function dispense() {
   speak('Please take the medication from the cup.'); render();
 }
 function observe() {
-  if (state.phase !== 'dispensed') return; state.phase = 'gesture';
-  els['device-message'].textContent = 'Possible intake observed. Please confirm.';
-  speak('Did you take your medication? Please confirm.'); render();
-}
-function confirm() {
-  if (!['dispensed','gesture'].includes(state.phase)) return; state.phase = state.dose === 2 ? 'finished' : 'completed';
-  els['device-message'].textContent = state.dose === 2 ? 'Two doses complete. Thank you.' : 'Thank you. Next reminder is scheduled.';
+  if (state.phase !== 'dispensed') return; state.phase = state.dose === 2 ? 'finished' : 'completed';
+  els['device-message'].textContent = state.dose === 2 ? 'Two doses complete. Thank you.' : 'Dose taken. Next dose is scheduled.';
   speak('Thank you. Your dose is recorded.'); render();
   if (state.dose === 1) delay(() => { if (state.phase !== 'completed') return; state.dose = 2; state.phase = 'waiting'; presenceFrames = 0; els['device-message'].textContent = 'Dose 2 is due. Waiting for someone to enter.'; render(); }, 8000);
 }
 
 // ---------- Shared vision analysis ----------
-// obs: { face: {x0,y0,x1,y1,mouth,width} | null, hands: [{tips:[{x,y}], points?, thumbsUp?}] } in mirrored, normalized coords.
+// obs: { face: {x0,y0,x1,y1,mouth,width} | null, hands: [{tips:[{x,y}], points}] } in mirrored, normalized coords.
 function analyze(obs) {
   const face = obs.face, hands = obs.hands;
   presenceFrames = face ? presenceFrames + 1 : 0;
@@ -67,15 +60,11 @@ function analyze(obs) {
   gestureFrames = state.phase === 'dispensed' && near ? gestureFrames + 1 : 0;
   if (gestureFrames >= GESTURE_FRAMES) { gestureFrames = 0; observe(); }
 
-  const thumb = ['dispensed','gesture'].includes(state.phase) && !near && hands.some(h => h.thumbsUp);
-  thumbFrames = thumb ? thumbFrames + 1 : 0;
-  if (thumbFrames >= THUMB_FRAMES) { thumbFrames = 0; confirm(); }
-
   els['r-face'].textContent = face ? 'Present' : 'None';
-  els['r-hands'].textContent = hands.length + (hands.some(h => h.thumbsUp) ? ' · 👍' : '');
+  els['r-hands'].textContent = String(hands.length);
   els['r-dist'].style.width = `${isFinite(ratio) ? clamp(1 - (ratio - MOUTH_RADIUS) / 1.6) * 100 : 0}%`;
-  els['r-hold'].style.width = `${Math.max(gestureFrames / GESTURE_FRAMES, thumbFrames / THUMB_FRAMES) * 100}%`;
-  return { ratio, nearest, near, thumb };
+  els['r-hold'].style.width = `${gestureFrames / GESTURE_FRAMES * 100}%`;
+  return { ratio, nearest, near };
 }
 function clearReadouts() { els['r-face'].textContent = els['r-hands'].textContent = '—'; els['r-dist'].style.width = els['r-hold'].style.width = '0%'; }
 
@@ -103,7 +92,6 @@ function drawOverlay(obs, a) {
       for (const p of h.points) { ctx.beginPath(); ctx.arc(p.x * W, p.y * H, 3 * s, 0, Math.PI * 2); ctx.fillStyle = ORANGE; ctx.fill(); }
     }
     for (const t of h.tips) { ctx.beginPath(); ctx.arc(t.x * W, t.y * H, 6 * s, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 2.5 * s; ctx.strokeStyle = ORANGE; ctx.stroke(); }
-    if (h.thumbsUp) { const t = h.tips[0]; tag('THUMBS-UP', t.x * W + 10 * s, t.y * H); }
   }
   if (f && a.nearest) {
     ctx.strokeStyle = a.near ? ORANGE_DEEP : ORANGE; ctx.lineWidth = 1.5 * s; ctx.setLineDash([3 * s, 4 * s]);
@@ -118,49 +106,11 @@ function drawRoom() {
   ctx.strokeStyle = '#f1d5c8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(W * .21, H * .1); ctx.lineTo(W * .21, H * .44); ctx.moveTo(W * .08, H * .27); ctx.lineTo(W * .34, H * .27); ctx.stroke();
   ctx.fillStyle = '#f6e3d9'; ctx.fillRect(0, H * .8, W, H * .2);
 }
-function drawIdle(text) {
+function drawIdle(text, sub = 'Click Start camera demo to begin') {
   drawRoom(); const W = canvas.width, H = canvas.height;
   ctx.fillStyle = '#ffffffcc'; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = ORANGE_DEEP; ctx.textAlign = 'center'; ctx.font = '600 20px Inter, system-ui, sans-serif'; ctx.fillText(text, W / 2, H / 2);
-  ctx.font = '14px Inter, system-ui, sans-serif'; ctx.fillStyle = '#7a6a62'; ctx.fillText('Start the camera demo or run the simulated demo', W / 2, H / 2 + 26); ctx.textAlign = 'start';
-}
-
-// ---------- Simulated person (drives the same vision pipeline) ----------
-function simActor() {
-  const t = performance.now() - state.since;
-  switch (state.phase) {
-    case 'waiting': sim.tx = t > 900 ? .5 : sim.tx; sim.ht = 0; break;
-    case 'prompted': sim.tx = .5; if (t > 2300 && !state.simPressed) { state.simPressed = true; flash(els.dispense); dispense(); } break;
-    case 'dispensed': state.simPressed = false; sim.ht = t > 1300 ? 1 : 0; break;
-    case 'gesture': if (t > 700) sim.ht = 0; if (t > 2200 && !state.simPressed) { state.simPressed = true; sim.thumb = true; delay(() => { sim.thumb = false; flash(els.confirm); confirm(); }, 900); } break;
-    case 'completed': case 'finished': state.simPressed = false; sim.ht = 0; if (t > 1400) sim.tx = -.4; break;
-  }
-  sim.x += clamp(sim.tx - sim.x, -.011, .011); sim.hand += (sim.ht - sim.hand) * .07;
-}
-function simFrame() {
-  simActor(); drawRoom();
-  const W = canvas.width, H = canvas.height, r = H * .12;
-  const cx = sim.x * W, cy = H * .4, bob = Math.abs(sim.tx - sim.x) > .01 ? Math.sin(performance.now() / 110) * 4 : 0;
-  // body + head
-  ctx.fillStyle = ORANGE; roundRect(cx - r * 1.35, cy + r * 1.15 + bob, r * 2.7, H, r * .9); ctx.fill();
-  ctx.fillStyle = '#f4d4c2'; ctx.beginPath(); ctx.arc(cx, cy + bob, r, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#5a3a2c'; ctx.beginPath(); ctx.arc(cx - r * .35, cy - r * .1 + bob, r * .08, 0, 7); ctx.arc(cx + r * .35, cy - r * .1 + bob, r * .08, 0, 7); ctx.fill();
-  const mouth = { x: cx, y: cy + r * .45 + bob };
-  ctx.strokeStyle = '#9e4a2c'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(mouth.x, mouth.y - r * .12, r * .22, .2 * Math.PI, .8 * Math.PI); ctx.stroke();
-  // arm + hand
-  const rest = { x: cx + r * 1.2, y: H * 1.05 }, goal = { x: mouth.x + r * .15, y: mouth.y + r * .35 };
-  const hx = rest.x + (goal.x - rest.x) * sim.hand, hy = rest.y + (goal.y - rest.y) * sim.hand;
-  ctx.strokeStyle = '#c15f3c'; ctx.lineWidth = r * .42; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(cx + r * 1.05, cy + r * 1.6 + bob); ctx.quadraticCurveTo(cx + r * 1.9, hy + r * .9, hx, hy + r * .2); ctx.stroke(); ctx.lineCap = 'butt';
-  ctx.fillStyle = '#f4d4c2'; ctx.beginPath(); ctx.arc(hx, hy, r * .3, 0, Math.PI * 2); ctx.fill();
-  if (sim.thumb) { ctx.font = `${r}px system-ui`; ctx.fillText('👍', cx + r * 1.3, cy + r * .9); }
-
-  // synthetic landmarks with a little sensor jitter
-  const j = () => (Math.random() - .5) * .006, n = (px, py) => ({ x: px / W + j(), y: py / H + j() });
-  const inFrame = sim.x > .12 && sim.x < .88;
-  const face = inFrame ? { x0: (cx - r * 1.1) / W, y0: (cy - r * 1.15 + bob) / H, x1: (cx + r * 1.1) / W, y1: (cy + r * 1.1 + bob) / H, mouth: n(mouth.x, mouth.y), width: (r * 2) / W } : null;
-  const hands = hy < H * .98 && inFrame ? [{ tips: [n(hx - r * .2, hy - r * .25), n(hx, hy - r * .32), n(hx + r * .2, hy - r * .25)] }] : [];
-  const obs = { face, hands };
-  drawOverlay(obs, analyze(obs));
+  ctx.fillStyle = ORANGE_DEEP; ctx.textAlign = 'center'; ctx.font = '700 36px Inter, system-ui, sans-serif'; ctx.fillText(text, W / 2, H / 2);
+  ctx.font = '22px Inter, system-ui, sans-serif'; ctx.fillStyle = '#7a6a62'; ctx.fillText(sub, W / 2, H / 2 + 40); ctx.textAlign = 'start';
 }
 
 // ---------- Live camera ----------
@@ -172,13 +122,7 @@ function toObs(faces, hands) {
     for (const p of f) { const q = m(p); x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x); y1 = Math.max(y1, q.y); }
     face = { x0, y0, x1, y1, mouth: m({ x: (f[13].x + f[14].x) / 2, y: (f[13].y + f[14].y) / 2 }), width: dist(f[234], f[454]) || .15 };
   }
-  return { face, hands: hands.map(h => ({ points: h.map(m), tips: [4, 8, 12].map(i => m(h[i])), thumbsUp: isThumbsUp(h) })) };
-}
-function isThumbsUp(h) {
-  const size = dist(h[0], h[9]) || .1;
-  const thumbUp = h[4].y < h[3].y && h[3].y < h[2].y && h[2].y - h[4].y > size * .5 && h.every((p, i) => i === 4 || p.y > h[4].y);
-  const folded = [8, 12, 16, 20].every(i => dist(h[i], h[0]) < dist(h[i - 2], h[0]) * 1.1);
-  return thumbUp && folded;
+  return { face, hands: hands.map(h => ({ points: h.map(m), tips: [4, 8, 12].map(i => m(h[i])) })) };
 }
 function liveFrame() {
   const v = els.video, W = canvas.width, H = canvas.height;
@@ -196,15 +140,14 @@ function liveFrame() {
 function loop() {
   requestAnimationFrame(loop);
   if (mode === 'live') liveFrame();
-  else if (mode === 'sim') simFrame();
+  else if (camError) drawIdle('Camera blocked', camError);
   else drawIdle('Camera off');
 }
 function setMode(m) {
   mode = m; const badge = els['mode-badge'];
-  badge.textContent = { idle: 'Idle', sim: 'Simulated camera', live: 'Live camera' }[m]; badge.classList.toggle('live', m !== 'idle');
-  els['camera-label'].textContent = { idle: 'Camera off', sim: 'SIMULATED CAMERA', live: 'LIVE · starting' }[m];
+  badge.textContent = { idle: 'Idle', live: 'Live camera' }[m]; badge.classList.toggle('live', m !== 'idle');
+  els['camera-label'].textContent = { idle: 'Camera off', live: 'LIVE · starting' }[m];
   els.camera.textContent = m === 'live' ? 'Stop camera' : 'Start camera demo';
-  els.guided.textContent = m === 'sim' ? 'Restart simulation' : 'Run simulated demo';
   if (m === 'idle') clearReadouts();
 }
 
@@ -218,7 +161,7 @@ async function createLandmarkers(vision, FaceLandmarker, HandLandmarker, delegat
 // Frames stay in the browser. Model files and the MediaPipe runtime load from public CDNs.
 async function startCamera() {
   if (loading) return; loading = true;
-  reset(); setMode('live'); els['camera-status'].textContent = 'Requesting camera and loading models…';
+  camError = null; reset(); setMode('live'); els['camera-status'].textContent = 'Requesting camera and loading models…';
   try {
     if (!navigator.mediaDevices?.getUserMedia) throw Error('Camera access requires localhost or HTTPS.');
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 }, audio: false });
@@ -231,7 +174,13 @@ async function startCamera() {
     if (!stream) { pair.forEach(p => p.close()); return; }
     [faceLandmarker, handLandmarker] = pair;
     els['camera-status'].textContent = 'Live analysis running on this device.';
-  } catch (err) { els['camera-status'].textContent = `Camera unavailable: ${err.message}`; stopCamera(false); }
+  } catch (err) {
+    camError = err.name === 'NotAllowedError' ? 'Allow camera access for this site, then try again'
+      : err.name === 'NotFoundError' ? 'No camera found on this device'
+      : !window.isSecureContext ? 'Open the page over localhost or HTTPS'
+      : 'Could not start: ' + err.message;
+    els['camera-status'].textContent = `Camera unavailable: ${err.message}`; stopCamera(false);
+  }
   finally { loading = false; }
 }
 function stopCamera(message = true) {
@@ -241,10 +190,9 @@ function stopCamera(message = true) {
   if (mode === 'live') setMode('idle');
   if (message) els['camera-status'].textContent = 'Camera off.';
 }
-function startSim() { if (stream) stopCamera(false); reset(); setMode('sim'); els['camera-status'].textContent = 'Simulated person and synthetic landmarks. No camera in use.'; }
 
-els.enter.onclick = enter; els.dispense.onclick = dispense; els.observe.onclick = observe; els.confirm.onclick = confirm;
-els.guided.onclick = startSim; els.reset.onclick = reset;
+els.enter.onclick = enter; els.dispense.onclick = dispense; els.observe.onclick = observe;
+els.reset.onclick = reset;
 els.camera.onclick = () => stream || loading ? stopCamera() : startCamera();
 document.addEventListener('keydown', (e) => { if (e.code === 'Space' && !['BUTTON','INPUT','TEXTAREA'].includes(e.target.tagName)) { e.preventDefault(); if (!els.dispense.disabled) { flash(els.dispense); dispense(); } } });
 window.addEventListener('pagehide', () => stopCamera(false));
